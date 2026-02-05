@@ -1,0 +1,100 @@
+name: Deploy to Cloudflare Workers
+
+on:
+  # 手动触发部署
+  workflow_dispatch:
+  # 推送到 master 分支时自动部署
+  push:
+    branches:
+      - master
+    paths:
+      - 'src/**'
+      - 'wrangler.toml'
+      - 'package.json'
+      - '.github/workflows/deploy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare Workers
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 修改点：如果设置了 KV_NAMESPACE_ID，则动态修改 wrangler.toml 启用 KV 配置
+      - name: Configure KV namespace (if provided)
+        if: ${{ secrets.KV_NAMESPACE_ID }}
+        run: |
+          echo "检测到 KV_NAMESPACE_ID，启用 KV 配置..."
+          # 取消注释 KV namespace 配置并替换 ID
+          sed -i 's/# \[\[kv_namespaces\]\]/[[kv_namespaces]]/g' wrangler.toml
+          sed -i 's/# binding = "VERIFICATION_KV"/binding = "VERIFICATION_KV"/g' wrangler.toml
+          sed -i "s/# id = \"YOUR_KV_NAMESPACE_ID\"/id = \"$KV_ID\"/g" wrangler.toml
+          echo "KV 配置已启用"
+        env:
+          KV_ID: ${{ secrets.KV_NAMESPACE_ID }}
+
+      # 修改点：部署到 Cloudflare Workers，通过 secrets 参数传递环境变量
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+          secrets: |
+            PREFIX
+            SECRET_TOKEN
+            VERIFICATION_ENABLED
+            VERIFICATION_TIMEOUT_DAYS
+        env:
+          PREFIX: ${{ secrets.PREFIX }}
+          SECRET_TOKEN: ${{ secrets.SECRET_TOKEN }}
+          VERIFICATION_ENABLED: ${{ secrets.VERIFICATION_ENABLED }}
+          VERIFICATION_TIMEOUT_DAYS: ${{ secrets.VERIFICATION_TIMEOUT_DAYS }}
+
+      - name: Deployment summary
+        run: |
+          echo "## 部署完成 ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 配置信息" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$KV_ID" ]; then
+            echo "- **KV Namespace**: 已配置" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **KV Namespace**: 未配置（验证功能禁用）" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -n "$PREFIX" ]; then
+            echo "- **PREFIX**: 已配置" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **PREFIX**: 使用默认值" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -n "$SECRET_TOKEN" ]; then
+            echo "- **SECRET_TOKEN**: 已配置" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **SECRET_TOKEN**: 未配置" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -n "$VERIFICATION_ENABLED" ]; then
+            echo "- **VERIFICATION_ENABLED**: $VERIFICATION_ENABLED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **VERIFICATION_ENABLED**: 未配置（默认 false）" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -n "$VERIFICATION_TIMEOUT_DAYS" ]; then
+            echo "- **VERIFICATION_TIMEOUT_DAYS**: $VERIFICATION_TIMEOUT_DAYS 天" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **VERIFICATION_TIMEOUT_DAYS**: 未配置（默认 7 天）" >> $GITHUB_STEP_SUMMARY
+          fi
+        env:
+          KV_ID: ${{ secrets.KV_NAMESPACE_ID }}
+          PREFIX: ${{ secrets.PREFIX }}
+          SECRET_TOKEN: ${{ secrets.SECRET_TOKEN }}
+          VERIFICATION_ENABLED: ${{ secrets.VERIFICATION_ENABLED }}
+          VERIFICATION_TIMEOUT_DAYS: ${{ secrets.VERIFICATION_TIMEOUT_DAYS }}

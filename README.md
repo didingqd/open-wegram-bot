@@ -48,9 +48,35 @@
 
 ### 3. 选择部署方式
 
-#### 方法一：GitHub 一键部署（推荐 ⭐）
+#### 方法一：GitHub Actions 自动部署（推荐 ⭐）
 
-这是最简单的部署方式，无需本地开发环境，直接通过 GitHub 仓库部署。
+这是最灵活的部署方式，支持自动化 CI/CD 流程，可以在推送代码时自动部署到 Cloudflare Workers。
+
+**优势**：
+- ✅ 完全自动化：推送代码到 master 分支自动触发部署
+- ✅ 安全管理：通过 GitHub Secrets 管理所有敏感配置
+- ✅ 可选配置：未设置的配置项不会传递，保持默认行为
+- ✅ 支持验证功能：可选配置 KV namespace 启用人机验证
+
+**快速开始**：
+
+1. Fork 本仓库到您的 GitHub 账户
+2. 在仓库的 `Settings` → `Secrets and variables` → `Actions` 中添加必需的 secrets：
+   - `CLOUDFLARE_API_TOKEN`：您的 Cloudflare API Token
+   - `CLOUDFLARE_ACCOUNT_ID`：您的 Cloudflare Account ID
+3. （可选）添加其他配置 secrets：
+   - `PREFIX`：URL 路径前缀（默认：`public`）
+   - `SECRET_TOKEN`：Webhook 安全令牌
+   - `KV_NAMESPACE_ID`：启用人机验证功能（需先创建 KV namespace）
+   - `VERIFICATION_ENABLED`：是否启用验证（`true`/`false`）
+   - `VERIFICATION_TIMEOUT_DAYS`：验证有效期天数（默认：`7`）
+4. 推送代码到 master 分支，或在 Actions 页面手动触发部署
+
+**详细配置指南**：请查看 [GitHub Actions 部署文档](./GITHUB_ACTIONS_DEPLOY.md)
+
+#### 方法二：GitHub 集成部署
+
+这是另一种简单的部署方式，无需本地开发环境，直接通过 Cloudflare 连接 GitHub 仓库部署。
 
 1. Fork 或克隆本仓库到您的 GitHub 账户
 2. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)

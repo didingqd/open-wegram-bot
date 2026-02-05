@@ -5,3 +5,16 @@ keep_vars = true
 
 [placement]
 mode = "smart"
+
+# 修改点：添加人机验证功能 - KV namespace 绑定（可选）
+# 如果需要启用人机验证功能，请按以下步骤操作：
+# 1. 创建 KV namespace：npx wrangler kv:namespace create "VERIFICATION_KV"
+# 2. 将返回的 id 填写到下面的配置中
+# 3. 取消注释以下配置
+# 4. 设置环境变量 VERIFICATION_ENABLED=true
+#
+# 如果不需要验证功能，保持以下配置为注释状态即可，Bot 将正常工作
+#
+# [[kv_namespaces]]
+# binding = "VERIFICATION_KV"
+# id = "YOUR_KV_NAMESPACE_ID"  # 请替换为实际的 KV namespace ID
